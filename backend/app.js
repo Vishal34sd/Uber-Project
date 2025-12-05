@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser"
 
 import userRoutes from "./routes/userRoutes.js"
 import captainRoutes from "./routes/userRoutes.js"
+import mapRoutes from "./routes/mapRoutes.js"
 import connectToDb from "./config/connectToDB.js"
 
 
