@@ -10,7 +10,7 @@ export const createRide = async(req , res)=>{
 
     const {userId , pickup , destination , vehicleType} = req.body;
     try{
-        const ride = await createRide({userId : req.userId._id , pickup , destination , vehicleType});
+        const ride = await createRideService({userId : req.userId._id , pickup , destination , vehicleType});
         res.status(201).json({rideData : ride});
 
         const pickupCoordinates = await getAddressCoordinates(pickup);
@@ -37,7 +37,7 @@ export const getFare = async(req, res)=>{
 
     const {pickup , destination } = req.body ;
     try{
-        const fair = await getFair(pickup , destination);
+        const fair = await getFareService(pickup , destination);
         res.status(200).json({fairData : fair})
     }
     catch(e){
@@ -54,7 +54,7 @@ export const confirmRide = async(req, res) =>{
 
     const {rideId} = req.body;
     try{
-        const ride = await confirmRide({rideId , captain : req.captain});
+        const ride = await confirmRideService({rideId , captain : req.captain});
 
         sendMessageToSocketId(ride.user.socketId , {
             event : "new-ride",
@@ -75,7 +75,7 @@ export const startRide = async(req , res)=>{
 
     const {rideId , otp} = req.body;
     try{
-        const ride = await startRide({rideId , otp , captain : req.captain});
+        const ride = await startRideService({rideId , otp , captain : req.captain});
 
         sendMessageToSocketId(captain.socketId , {
             event : "ride-started",
@@ -96,7 +96,7 @@ export const endRide = async(req , res)=>{
 
     const {rideId} = req.body;
     try{
-        const ride = await endRide({rideId , captain : req.captain});
+        const ride = await endRideService({rideId , captain : req.captain});
 
         sendMessageToSocketId(ride.user.socketId , {
             event : "ride-ended",
