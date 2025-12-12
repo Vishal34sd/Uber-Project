@@ -1,6 +1,6 @@
 import userModel from "../models/userModel.js";
 import rideModel from "../models/rideModel.js";
-import { getDistanceAndTime } from "./mapService.js";
+import { getDistanceAndTime } from "./mapServices.js";
 
 export const getFareService = async ({ pickup, destination, vehicleType }) => {
     if (!pickup || !destination) {
@@ -45,16 +45,16 @@ export const generateOtp = () => {
     return otp.toString();
 }
 
-export const createRideService = async({user , pickup , destination , vehicleType})=>{
-    const fare = await getFairServices(pickup , destination);
+export const createRideService = async({ user , pickup , destination , vehicleType})=>{
+    const fare = await getFareService({ pickup , destination, vehicleType });
 
-    const ride = rideModel.create({
-        user  ,
+    const ride = await rideModel.create({
+        user ,
         pickup , 
         destination ,
         vehicleType ,
         otp : generateOtp(),
-        fare : fare[vehicleType]
+        fare
     });
     return ride ;
 }

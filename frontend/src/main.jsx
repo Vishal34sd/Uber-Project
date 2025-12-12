@@ -7,6 +7,7 @@ import UserRegister from "./pages/UserRegister.jsx"
 import CaptainRegister from "./pages/CaptainRegister.jsx"
 import LandingPage from "./pages/LandingPage";
 import UserHomePage from "./pages/UserHomePage.jsx"
+import CommonLogin from "./pages/CommonLogin.jsx"
 
 
 const router = createBrowserRouter([
@@ -26,6 +27,11 @@ const router = createBrowserRouter([
           path : "/register-captain",
           element : <CaptainRegister/>
      },
+     {
+          path : "/login",
+          element : <CommonLogin/>
+     },
+     
      {
           path : "/homepage-user",
           element : <UserHomePage/>

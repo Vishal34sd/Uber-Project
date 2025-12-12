@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import axios from "axios";
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-export default function UserRegister() {
+export default function CommonLogin() {
   const navigate = useNavigate();
+
+  const [role, setRole] = useState("user"); // default
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
     email: "",
     password: ""
   });
@@ -15,7 +15,7 @@ export default function UserRegister() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  // Handle input changes
+  // Handle email / password input
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -23,36 +23,39 @@ export default function UserRegister() {
     });
   };
 
-  // Form submit logic
+  // Handle login submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
 
-    // 🔥 Create payload according to backend requirement
-    const payload = {
-      fullname: {
-        firstname: formData.firstName,
-        lastname: formData.lastName,
-      },
-      email: formData.email,
-      password: formData.password,
-    };
+    // Determine API endpoint based on selected role
+    const endpoint =
+      role === "user"
+        ? "http://localhost:8080/api/v1/users/login"
+        : "http://localhost:8080/api/v1/captains/login";
 
     try {
-      const res = await axios.post(
-        "http://localhost:8080/api/v1/users/register",
-        payload
-      );
+      const res = await axios.post(endpoint, formData);
 
-      setSuccessMsg("Account created successfully!");
-      navigate("/login")
+      setSuccessMsg("Login successful!");
+
+      // store token
+      if (res.data?.token) {
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("role", role);
+      }
+
+      // Redirect to different dashboards
+      if (role === "user") {
+        navigate("/homepage-user");
+      } else {
+        navigate("/homepage-captain");
+      }
 
       // Reset form
       setFormData({
-        firstName: "",
-        lastName: "",
         email: "",
         password: ""
       });
@@ -60,7 +63,7 @@ export default function UserRegister() {
     } catch (error) {
       console.log(error);
       setErrorMsg(
-        error?.response?.data?.message || "Something went wrong. Try again!"
+        error?.response?.data?.message || "Invalid email or password!"
       );
     }
 
@@ -75,38 +78,26 @@ export default function UserRegister() {
         <div className="text-2xl font-bold tracking-tight">Uber</div>
       </nav>
 
-      {/* FORM CONTAINER */}
+      {/* LOGIN FORM */}
       <div className="max-w-md mx-auto mt-14 px-6">
         <form
           onSubmit={handleSubmit}
           className="border border-gray-300 rounded-xl p-6 shadow-sm"
         >
-          <h2 className="text-3xl font-semibold mb-2">Create your account</h2>
-          <p className="text-gray-600 mb-8">Sign up to get started</p>
+          <h2 className="text-3xl font-semibold mb-2">Login</h2>
+          <p className="text-gray-600 mb-8">Select role and continue</p>
 
-          {/* FIRST NAME */}
-          <input
-            type="text"
-            name="firstName"
-            value={formData.firstName}
-            onChange={handleChange}
-            placeholder="First Name"
-            className="w-full border border-gray-300 px-4 py-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black"
-            required
-          />
+          {/* ROLE SELECTOR */}
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="w-full border border-gray-300 px-4 py-3 rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-black"
+          >
+            <option value="user">Login as User</option>
+            <option value="captain">Login as Captain</option>
+          </select>
 
-          {/* LAST NAME */}
-          <input
-            type="text"
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleChange}
-            placeholder="Last Name"
-            className="w-full border border-gray-300 px-4 py-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black"
-            required
-          />
-
-          {/* EMAIL */}
+          {/* EMAIL INPUT */}
           <input
             type="email"
             name="email"
@@ -117,7 +108,7 @@ export default function UserRegister() {
             required
           />
 
-          {/* PASSWORD */}
+          {/* PASSWORD INPUT */}
           <input
             type="password"
             name="password"
@@ -129,22 +120,18 @@ export default function UserRegister() {
           />
 
           {/* ERROR MESSAGE */}
-          {errorMsg && (
-            <p className="text-red-600 mb-3 text-sm">{errorMsg}</p>
-          )}
+          {errorMsg && <p className="text-red-600 mb-3 text-sm">{errorMsg}</p>}
 
           {/* SUCCESS MESSAGE */}
-          {successMsg && (
-            <p className="text-green-600 mb-3 text-sm">{successMsg}</p>
-          )}
+          {successMsg && <p className="text-green-600 mb-3 text-sm">{successMsg}</p>}
 
-          {/* SIGN UP BUTTON */}
+          {/* LOGIN BUTTON */}
           <button
             type="submit"
             disabled={loading}
             className="w-full bg-black text-white py-3 rounded-lg text-lg font-medium hover:bg-gray-900 transition"
           >
-            {loading ? "Creating account..." : "Sign Up"}
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
       </div>

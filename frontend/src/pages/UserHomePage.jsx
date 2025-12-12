@@ -1,16 +1,71 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Navbar from "../components/Navbar";
+import axios from "axios";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 export default function UserHome() {
   const [pickup, setPickup] = useState("");
   const [destination, setDestination] = useState("");
-  const [fare, setFare] = useState(null);
-  const [selectedRide, setSelectedRide] = useState("");
-  const [riderType, setRiderType] = useState("me"); // NEW
 
-  // 👉 INITIALIZE MAP
+  const [pickupSuggestions, setPickupSuggestions] = useState([]);
+  const [destinationSuggestions, setDestinationSuggestions] = useState([]);
+
+  const pickupTimer = useRef(null);
+  const destinationTimer = useRef(null);
+
+  const [vehicle, setVehicle] = useState(""); // NEW — car/auto/bike
+  const [fare, setFare] = useState(null);
+
+  const [riderType, setRiderType] = useState("me");
+
+  // 📌 Auto-suggestion API
+  const fetchSuggestions = async (query) => {
+    try {
+      const res = await axios.get(
+        "http://localhost:8080/api/v1/maps/get-suggestions",
+        { params: { input: query } }
+      );
+      return res.data.data || [];
+    } catch (err) {
+      console.log("Suggestion API Error:", err);
+      return [];
+    }
+  };
+
+  // 📌 PICKUP change handler
+  const handlePickupChange = (e) => {
+    const value = e.target.value;
+    setPickup(value);
+    clearTimeout(pickupTimer.current);
+
+    pickupTimer.current = setTimeout(async () => {
+      if (value.length >= 3) {
+        const results = await fetchSuggestions(value);
+        setPickupSuggestions(results.map((item) => item.name));
+      } else {
+        setPickupSuggestions([]);
+      }
+    }, 400);
+  };
+
+  // 📌 DESTINATION change handler
+  const handleDestinationChange = (e) => {
+    const value = e.target.value;
+    setDestination(value);
+    clearTimeout(destinationTimer.current);
+
+    destinationTimer.current = setTimeout(async () => {
+      if (value.length >= 3) {
+        const results = await fetchSuggestions(value);
+        setDestinationSuggestions(results.map((item) => item.name));
+      } else {
+        setDestinationSuggestions([]);
+      }
+    }, 400);
+  };
+
+  // ⭐ Initialize map
   useEffect(() => {
     const map = L.map("map").setView([28.6139, 77.2090], 12);
 
@@ -21,26 +76,40 @@ export default function UserHome() {
     return () => map.remove();
   }, []);
 
-  const handleGetFare = () => {
-    if (pickup && destination) {
-      setFare({
-        bike: 40,
-        auto: 60,
-        car: 120,
-      });
+  // ⭐ Get fare based on selected vehicle
+  const handleGetFare = async () => {
+    if (!pickup || !destination || !vehicle) {
+      alert("Please enter pickup, destination and select vehicle");
+      return;
+    }
+
+    try {
+      const res = await axios.get(
+        "http://localhost:8080/api/v1/maps/get-fare",
+        {
+          params: {
+            pickup,
+            destination,
+            vehicle,
+          },
+        }
+      );
+
+      setFare(res.data.fare);
+    } catch (error) {
+      console.log("Fare Error:", error);
+      alert("Could not fetch fare!");
     }
   };
 
+  // ⭐ Book ride
   const handleBookRide = () => {
-    if (!selectedRide) {
-      alert("Please select a ride type!");
-      return;
-    }
+    if (!fare) return alert("Please fetch fare first.");
 
     alert(
       `Ride booked for ${
         riderType === "me" ? "YOU" : "SOMEONE ELSE"
-      } — ${selectedRide.toUpperCase()}`
+      } — Vehicle: ${vehicle.toUpperCase()} — Fare: ₹${fare}`
     );
   };
 
@@ -50,124 +119,101 @@ export default function UserHome() {
 
       <div className="min-h-screen flex bg-white">
 
-        {/* LEFT FORM BOX */}
+        {/* LEFT PANEL */}
         <div className="w-1/2 p-10">
           <div className="border border-gray-300 rounded-xl p-8 shadow-sm">
 
             <h2 className="text-3xl font-bold mb-2">Book your ride</h2>
             <p className="text-gray-600 mb-6">Enter your trip details</p>
 
-            {/* PICKUP */}
-            <input
-              type="text"
-              placeholder="Pickup location"
-              value={pickup}
-              onChange={(e) => setPickup(e.target.value)}
-              className="w-full border border-gray-300 px-4 py-3 rounded-lg mb-4 focus:ring-2 focus:ring-black"
-            />
+            {/* PICKUP INPUT */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Pickup location"
+                value={pickup}
+                onChange={handlePickupChange}
+                className="w-full border border-gray-300 px-4 py-3 rounded-lg mb-4"
+              />
 
-            {/* DESTINATION */}
-            <input
-              type="text"
-              placeholder="Destination"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              className="w-full border border-gray-300 px-4 py-3 rounded-lg mb-4 focus:ring-2 focus:ring-black"
-            />
-
-            {/* WHO IS RIDING — SIMPLE BUTTONS */}
-            <h3 className="text-xl font-semibold mb-3">Select the rider</h3>
-
-            <div className="flex gap-3 mb-6">
-              {/* FOR ME */}
-              <button
-                onClick={() => setRiderType("me")}
-                className={`px-4 py-2 rounded-lg border text-sm font-medium w-1/2 transition
-                  ${
-                    riderType === "me"
-                      ? "bg-black text-white border-black"
-                      : "bg-white text-black border-gray-300"
-                  }`}
-              >
-                For Me
-              </button>
-
-              {/* SOMEONE ELSE */}
-              <button
-                onClick={() => setRiderType("someone")}
-                className={`px-4 py-2 rounded-lg border text-sm font-medium w-1/2 transition
-                  ${
-                    riderType === "someone"
-                      ? "bg-black text-white border-black"
-                      : "bg-white text-black border-gray-300"
-                  }`}
-              >
-                Someone Else
-              </button>
+              {pickupSuggestions.length > 0 && (
+                <div className="absolute bg-white w-full border rounded-lg shadow-md z-50">
+                  {pickupSuggestions.map((name, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        setPickup(name);
+                        setPickupSuggestions([]);
+                      }}
+                      className="p-2 hover:bg-gray-200 cursor-pointer"
+                    >
+                      {name}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* DESTINATION INPUT */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Destination"
+                value={destination}
+                onChange={handleDestinationChange}
+                className="w-full border border-gray-300 px-4 py-3 rounded-lg mb-4"
+              />
+
+              {destinationSuggestions.length > 0 && (
+                <div className="absolute bg-white w-full border rounded-lg shadow-md z-50">
+                  {destinationSuggestions.map((name, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        setDestination(name);
+                        setDestinationSuggestions([]);
+                      }}
+                      className="p-2 hover:bg-gray-200 cursor-pointer"
+                    >
+                      {name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* SELECT VEHICLE */}
+            <select
+              value={vehicle}
+              onChange={(e) => setVehicle(e.target.value)}
+              className="w-full border border-gray-300 px-4 py-3 rounded-lg mb-4"
+            >
+              <option value="">Select Vehicle</option>
+              <option value="bike">Bike</option>
+              <option value="auto">Auto</option>
+              <option value="car">Car</option>
+            </select>
 
             {/* GET FARE BUTTON */}
             <button
               onClick={handleGetFare}
-              className="w-full bg-black text-white py-3 rounded-lg text-lg font-medium hover:bg-gray-900 transition mb-6"
+              className="w-full bg-black text-white py-3 rounded-lg mb-4 text-lg font-medium"
             >
               Get Fare
             </button>
 
-            {/* RIDE OPTIONS */}
-            {fare && (
-              <div className="space-y-4 mb-6">
-                <h3 className="text-xl font-semibold mb-4">Select your ride</h3>
-
-                {/* BIKE */}
-                <div
-                  onClick={() => setSelectedRide("bike")}
-                  className={`p-4 border rounded-lg cursor-pointer flex justify-between transition
-                    ${
-                      selectedRide === "bike"
-                        ? "bg-black text-white"
-                        : "bg-white"
-                    }`}
-                >
-                  <span>Bike</span>
-                  <span>₹{fare.bike}</span>
-                </div>
-
-                {/* AUTO */}
-                <div
-                  onClick={() => setSelectedRide("auto")}
-                  className={`p-4 border rounded-lg cursor-pointer flex justify-between transition
-                    ${
-                      selectedRide === "auto"
-                        ? "bg-black text-white"
-                        : "bg-white"
-                    }`}
-                >
-                  <span>Auto</span>
-                  <span>₹{fare.auto}</span>
-                </div>
-
-                {/* CAR */}
-                <div
-                  onClick={() => setSelectedRide("car")}
-                  className={`p-4 border rounded-lg cursor-pointer flex justify-between transition
-                    ${
-                      selectedRide === "car"
-                        ? "bg-black text-white"
-                        : "bg-white"
-                    }`}
-                >
-                  <span>Car</span>
-                  <span>₹{fare.car}</span>
-                </div>
+            {/* DISPLAY FARE */}
+            {fare !== null && (
+              <div className="text-xl font-semibold mb-6">
+                Estimated Fare: <span className="text-green-600">₹{fare}</span>
               </div>
             )}
 
             {/* BOOK BUTTON */}
-            {fare && (
+            {fare !== null && (
               <button
                 onClick={handleBookRide}
-                className="w-full bg-black text-white py-3 rounded-lg text-lg font-medium hover:bg-gray-900 transition"
+                className="w-full bg-black text-white py-3 rounded-lg text-lg font-medium"
               >
                 Book Ride
               </button>
@@ -175,10 +221,11 @@ export default function UserHome() {
           </div>
         </div>
 
-        {/* MAP AREA */}
+        {/* MAP PANEL */}
         <div className="w-1/2 bg-gray-200 m-5 h-[605px] rounded-xl overflow-hidden">
           <div id="map" className="w-full h-full"></div>
         </div>
+
       </div>
     </>
   );

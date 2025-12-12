@@ -1,6 +1,7 @@
 import {validationResult} from "express-validator";
-import {getAddressCoordinates , getCaptainInTheRadius ,getAutoCompleteSuggestions} from "../services/mapServices.js";
-import {  createRideService, getCaptainInTheRadius , confirmRideService , startRideService ,endRideService} from "../services/rideServices.js";
+import { getAddressCoordinates, getCaptainInTheRadius } from "../services/mapServices.js";
+import { getFareService, createRideService, confirmRideService , startRideService , endRideService } from "../services/rideService.js";
+import { sendMessageToSocketId } from "../socket.js";
 import rideModel from "../models/rideModel.js";
 
 export const createRide = async(req , res)=>{
@@ -9,20 +10,22 @@ export const createRide = async(req , res)=>{
         return res.status(400).json({errors: errors.array()});
     }
 
-    const {userId , pickup , destination , vehicleType} = req.body;
+    const { pickup , destination , vehicleType} = req.body;
     try{
-        const ride = await createRideService({userId : req.userId._id , pickup , destination , vehicleType});
+        const ride = await createRideService({ user: req.user._id , pickup , destination , vehicleType});
         res.status(201).json({rideData : ride});
 
         const pickupCoordinates = await getAddressCoordinates(pickup);
         const captainInRadius = await getCaptainInTheRadius(pickupCoordinates.lat , pickupCoordinates.lng , 2);
 
-        const otp = "";
-
         const rideWithUser = await rideModel.findOne({_id:ride._id}).populate("user");
-        captainInRadius.map(captain.socketId , {
-            event : "new-ride" ,
-            data : rideWithUser
+        captainInRadius.forEach((captain) => {
+            if (captain.socketId) {
+                sendMessageToSocketId(captain.socketId , {
+                    event : "new-ride" ,
+                    data : rideWithUser
+                });
+            }
         });
     }
     catch(e){
@@ -36,10 +39,10 @@ export const getFare = async(req, res)=>{
         return res.status(400).json({errors: errors.array()});
     }
 
-    const {pickup , destination } = req.body ;
+    const { pickup , destination, vehicleType } = req.query ;
     try{
-        const fair = await getFareService(pickup , destination);
-        res.status(200).json({fairData : fair})
+        const fare = await getFareService({ pickup , destination, vehicleType });
+        res.status(200).json({fareData : fare})
     }
     catch(e){
         console.log(e);
@@ -78,7 +81,7 @@ export const startRide = async(req , res)=>{
     try{
         const ride = await startRideService({rideId , otp , captain : req.captain});
 
-        sendMessageToSocketId(captain.socketId , {
+        sendMessageToSocketId(req.captain.socketId , {
             event : "ride-started",
             data : ride
         });

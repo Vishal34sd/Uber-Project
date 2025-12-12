@@ -1,10 +1,10 @@
-import socketIO  from "socket.io";
+import { Server } from "socket.io";
 import userModel from "./models/userModel.js";
 import captainModel from "./models/captainModel.js";
 
 let io;
 function initializeSocket(server) {
-    io = socketIO(server, {
+    io = new Server(server, {
         cors: {
             origin: "*",
             methods: ["GET", "POST"],
@@ -36,12 +36,16 @@ function initializeSocket(server) {
 
 const sendMessageToSocketId = (socketId, messageObject) => {
     if (!io){
-        io.to(socketId).emit(messageObject.event , messageObject.data);
+        console.log("socket not initialized");
+        return;
     }
-    else{
-        console.log("socket not initialized")
+
+    if (!socketId){
+        console.log("no socketId provided");
+        return;
     }
-    
+
+    io.to(socketId).emit(messageObject.event , messageObject.data);
 };
 
 export { initializeSocket, sendMessageToSocketId };

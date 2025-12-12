@@ -1,107 +1,185 @@
-import React from "react";
-import {Link} from "react-router-dom";
+import React, { useState, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const LandingPage = () => {
+  const navigate = useNavigate();
+
+  // INPUT STATES
+  const [pickup, setPickup] = useState("");
+  const [dropoff, setDropoff] = useState("");
+
+  // ONLY NAMES IN STATES
+  const [pickupSuggestions, setPickupSuggestions] = useState([]);
+  const [dropoffSuggestions, setDropoffSuggestions] = useState([]);
+
+  // Debounce timers
+  const pickupTimer = useRef(null);
+  const dropoffTimer = useRef(null);
+
+  // API CALL (correct format)
+  const fetchSuggestions = async (query) => {
+    try {
+      const res = await axios.get(
+        "http://localhost:8080/api/v1/maps/get-suggestions",
+        {
+          params: { input: query },
+        }
+      );
+
+      // Backend returns: { data: [ ... ] }
+      return res.data.data || [];
+    } catch (err) {
+      console.log("Suggestion API Error:", err);
+      return [];
+    }
+  };
+
+  // PICKUP HANDLER
+  const handlePickupChange = (e) => {
+    const value = e.target.value;
+    setPickup(value);
+
+    clearTimeout(pickupTimer.current);
+
+    pickupTimer.current = setTimeout(async () => {
+      if (value.length >= 3) {
+        const results = await fetchSuggestions(value);
+
+        // extract names
+        const names = results.map((item) => item.name);
+
+        setPickupSuggestions(names);
+      } else {
+        setPickupSuggestions([]);
+      }
+    }, 400);
+  };
+
+  // DROPOFF HANDLER
+  const handleDropoffChange = (e) => {
+    const value = e.target.value;
+    setDropoff(value);
+
+    clearTimeout(dropoffTimer.current);
+
+    dropoffTimer.current = setTimeout(async () => {
+      if (value.length >= 3) {
+        const results = await fetchSuggestions(value);
+
+        const names = results.map((item) => item.name);
+
+        setDropoffSuggestions(names);
+      } else {
+        setDropoffSuggestions([]);
+      }
+    }, 400);
+  };
+
   return (
     <div className="min-h-screen bg-white font-sans">
 
-      {/* Navbar */}
+      {/* NAVBAR */}
       <nav className="w-full flex justify-between items-center px-8 py-4 border-b bg-black">
-        <div className="text-3xl font-bold tracking-tight text-white">Uber</div>
+        <div className="text-3xl font-bold text-white">Uber</div>
 
-        <div className="hidden md:flex space-x-5 text-[15px] text-white mr-96">
-          <a href="#" className="hover:bg-gray-700 rounded-full  px-5 py-2">Ride</a>
-          <a href="#" className="hover:bg-gray-700 rounded-full  px-5 py-2">Drive</a>
-          <a href="#" className="hover:bg-gray-700 rounded-full  px-5 py-2">Business</a>
-          <a href="#" className="hover:bg-gray-700 rounded-full  px-5 py-2">About</a>
+        <div className="hidden md:flex space-x-5 text-white mr-96">
+          <a href="#" className="hover:bg-gray-700 rounded-full px-5 py-2">Ride</a>
+          <a href="#" className="hover:bg-gray-700 rounded-full px-5 py-2">Drive</a>
+          <a href="#" className="hover:bg-gray-700 rounded-full px-5 py-2">Business</a>
+          <a href="#" className="hover:bg-gray-700 rounded-full px-5 py-2">About</a>
         </div>
 
-        <div className="flex space-x-2 text-[15px] items-center">
-          <button className=" hover:bg-gray-700 rounded-full  px-5 py-2 text-white">Help</button>
-          <button className="hover:bg-gray-700 rounded-full  px-5 py-2 text-white">Log in</button>
-          <Link to="/register"><button className="bg-white text-black px-5 py-2 rounded-full font-medium">
-            Sign up
-          </button></Link>
+        <div className="flex space-x-2 text-white">
+          <button className="hover:bg-gray-700 rounded-full px-5 py-2">Help</button>
+          <button className="hover:bg-gray-700 rounded-full px-5 py-2">Log in</button>
+          <Link to="/register">
+            <button className="bg-white text-black px-5 py-2 rounded-full">Sign up</button>
+          </Link>
         </div>
       </nav>
 
-      {/* Main Section */}
+      {/* MAIN SECTION */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 px-10 py-16">
 
-        {/* Left */}
+        {/* LEFT SIDE */}
         <div>
-          <p className="text-gray-700 mb-1 flex items-center text-[15px]">
-            📍 Bhopal, IN
-          </p>
-
-          <h1 className="text-[44px] leading-tight font-bold text-black mb-4">
-            Request a ride for <br /> now or later
+          <h1 className="text-[44px] font-bold leading-tight">
+            Request a ride for now or later
           </h1>
 
-          <p className="text-gray-500 text-[15px] mb-6">
-            Up to 50% off your first 5 Uber rides. T&Cs apply.*
-          </p>
-
-          <button className="border border-gray-300 px-4 py-2 rounded-full text-[15px] font-medium mb-4 bg-gray-200">
-            Pickup now
-          </button>
-
-          {/* Inputs */}
-          <div className="space-y-3 ">
+          {/* PICKUP INPUT */}
+          <div className="relative mt-4">
             <input
+              value={pickup}
+              onChange={handlePickupChange}
               placeholder="Pickup location"
-              className="w-full border border-gray-300 rounded-lg p-3 text-[15px] focus:outline-black bg-gray-100"
+              className="w-full border border-gray-300 rounded-lg p-3 bg-gray-100"
             />
 
-            <input
-              placeholder="Dropoff location"
-              className="w-full border border-gray-300 rounded-lg p-3 text-[15px] focus:outline-black bg-gray-100"
-            />
+            {pickupSuggestions.length > 0 && (
+              <div className="absolute bg-white w-full border rounded-lg shadow-md mt-1 z-50">
+                {pickupSuggestions.map((name, i) => (
+                  <div
+                    key={i}
+                    onClick={() => {
+                      setPickup(name);
+                      setPickupSuggestions([]);
+                    }}
+                    className="p-2 hover:bg-gray-200 cursor-pointer"
+                  >
+                    {name}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <button className="mt-6 bg-black text-white px-6 py-3 rounded-lg font-medium text-[15px] hover:cursor-pointer">
+          {/* DROPOFF INPUT */}
+          <div className="relative mt-4">
+            <input
+              value={dropoff}
+              onChange={handleDropoffChange}
+              placeholder="Dropoff location"
+              className="w-full border border-gray-300 rounded-lg p-3 bg-gray-100"
+            />
+
+            {dropoffSuggestions.length > 0 && (
+              <div className="absolute bg-white w-full border rounded-lg shadow-md mt-1 z-50">
+                {dropoffSuggestions.map((name, i) => (
+                  <div
+                    key={i}
+                    onClick={() => {
+                      setDropoff(name);
+                      setDropoffSuggestions([]);
+                    }}
+                    className="p-2 hover:bg-gray-200 cursor-pointer"
+                  >
+                    {name}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* BUTTON */}
+          <button
+            className="mt-6 bg-black text-white px-6 py-3 rounded-lg"
+            onClick={() => navigate("/register")}
+          >
             See prices
           </button>
         </div>
 
-        {/* Right Image */}
+        {/* RIGHT IMAGE */}
         <div className="flex justify-center">
           <img
             src="/trip1.png"
-            alt="Ride illustration"
-            className="rounded-xl w-full max-w-md shadow-md "
+            className="rounded-xl w-full max-w-md shadow-md"
+            alt="Trip"
           />
         </div>
-      </div>
 
-      {/* Suggestions */}
-      <div className="px-10 pb-20">
-        <h2 className="text-3xl font-semibold mb-6 text-black">
-          Suggestions
-        </h2>
-
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {["Ride", "Reserve", "Intercity", "Courier", "Rentals", "Bike"].map(
-            (item) => (
-              <div
-                key={item}
-                className="border border-gray-200 p-6 rounded-xl shadow-sm hover:shadow-lg transition cursor-pointer bg-white"
-              >
-                <h3 className="font-semibold text-[17px] mb-2 text-black">
-                  {item}
-                </h3>
-
-                <p className="text-gray-600 text-[14px] mb-4 leading-snug">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                </p>
-
-                <button className="border border-gray-300 px-4 py-1 rounded-md text-[14px] font-medium hover:border-black">
-                  Details
-                </button>
-              </div>
-            )
-          )}
-        </div>
       </div>
     </div>
   );

@@ -23,7 +23,7 @@ app.use(cookieParser());
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/captains", captainRoutes);
 app.use("/api/v1/maps", mapRoutes);
-app.use("/api/v1/rises" , rideRoutes)
+app.use("/api/v1/rides" , rideRoutes)
 
 
 export default app ;

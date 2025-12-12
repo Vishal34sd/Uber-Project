@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 
-const rideSchema = new Mongoose({
+const rideSchema = new mongoose.Schema({
     user : {
         type : mongoose.Schema.Types.ObjectId,
         ref : "user",
