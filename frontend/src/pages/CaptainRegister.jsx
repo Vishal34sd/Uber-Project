@@ -21,18 +21,55 @@ export default function CaptainRegister() {
     });
   };
 
-  // Submit Logic
+  // Submit Logic (FIXED PAYLOAD)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // 🔥 Payload as backend expects
+    const payload = {
+      fullname: {
+        firstname: formData.firstname,
+        lastname: formData.lastname,
+      },
+      email: formData.email,
+      password: formData.password,
+      vehicle: {
+        color: formData.color,
+        plate: formData.plate,
+        capacity: Number(formData.capacity),
+        vehicleType: formData.vehicleType,
+      },
+    };
+
     try {
-      const response = await axios.post("http://localhost:3000/api/captains/register", formData);
-      
+      const response = await axios.post(
+        "http://localhost:8080/api/v1/captains/register",
+        payload
+      );
+
       console.log("Captain registered:", response.data);
       alert("Captain account created successfully!");
+
+      // Optional: reset form
+      setFormData({
+        firstname: "",
+        lastname: "",
+        email: "",
+        password: "",
+        color: "",
+        plate: "",
+        capacity: "",
+        vehicleType: "",
+      });
+
     } catch (error) {
       console.error("Error registering captain:", error);
-      alert("Something went wrong. Try again!");
+
+      if (error.response?.data?.errors) {
+        alert(error.response.data.errors[0].msg);
+      } else {
+        alert("Something went wrong. Try again!");
+      }
     }
   };
 
