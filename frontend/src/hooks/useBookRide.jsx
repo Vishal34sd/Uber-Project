@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-
+import {getAccessToken} from "../helper/Token.js"
 export default function useBookRide() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -9,15 +9,22 @@ export default function useBookRide() {
     setLoading(true);
     setError(null);
 
-    try {
-      const res = await axios.post(
-        "http://localhost:8080/api/v1/rides/create",
-        {
-          pickup,
-          destination,
-          vehicleType,
-        }
-      );
+   try {
+  const token = getAccessToken();
+
+  const res = await axios.post(
+    "http://localhost:8080/api/v1/rides/create",
+    {
+      pickup,
+      destination,
+      vehicleType,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
 
       return res.data.ride;
     } catch (err) {

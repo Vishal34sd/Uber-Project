@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import {saveAccessToken} from "../helper/Token.js"
 
 export default function CaptainRegister() {
   const [formData, setFormData] = useState({
@@ -48,6 +49,7 @@ export default function CaptainRegister() {
       );
 
       console.log("Captain registered:", response.data);
+      saveAccessToken(response.data.token);
       alert("Captain account created successfully!");
 
       // Optional: reset form

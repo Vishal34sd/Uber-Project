@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
 import {useNavigate} from "react-router-dom";
+import {saveAccessToken} from "../helper/Token.js"
+
 
 export default function UserRegister() {
   const navigate = useNavigate();
@@ -47,6 +49,7 @@ export default function UserRegister() {
       );
 
       setSuccessMsg("Account created successfully!");
+      saveAccessToken(res.data.token);
       navigate("/login")
 
       // Reset form

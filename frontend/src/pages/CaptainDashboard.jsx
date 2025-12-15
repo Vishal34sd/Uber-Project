@@ -1,121 +1,95 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import io from "socket.io-client";
+import {decodeAccessToken} from "../helper/Token.js"
 
 const socket = io("http://localhost:8080");
 
-export default function CaptainDashboard() {
-  const [rideRequests, setRideRequests] = useState([]);
-  const [status, setStatus] = useState("Online – Waiting for rides");
+export default function UserAvailableRide() {
+  const [ride, setRide] = useState(null);
+  const [status, setStatus] = useState("Waiting for captain");
+  const userData = decodeAccessToken();
+  const userId = userData._id; 
 
   useEffect(() => {
-    socket.emit("captain-online", {
-      captainId: "CAPTAIN_123",
-      vehicleType: "car",
+
+    socket.emit("join", {
+      userId,
+      userType: "user",
     });
 
-    socket.on("new-ride", (ride) => {
-      setRideRequests((prev) => [ride, ...prev]);
-      setStatus("New ride requests available");
+    socket.on("ride-accepted", (rideData) => {
+      setRide(rideData);
+      setStatus("Captain accepted your ride");
+    });
+
+    socket.on("ride-rejected", (rideData) => {
+      setRide(rideData);
+      setStatus("Captain rejected your ride");
     });
 
     return () => {
-      socket.off("new-ride");
+      socket.off("ride-accepted");
+      socket.off("ride-rejected");
     };
   }, []);
 
-  const acceptRide = (rideId) => {
-    socket.emit("ride-accepted", {
-      rideId,
-      captainId: "CAPTAIN_123",
+  const cancelRide = () => {
+    socket.emit("user-cancel-ride", {
+      rideId: ride._id,
     });
 
-    setRideRequests((prev) =>
-      prev.filter((ride) => ride.rideId !== rideId)
-    );
-    setStatus("Ride accepted");
+    setStatus("Ride cancelled by user");
+    setRide(null);
   };
 
-  const rejectRide = (rideId) => {
-    socket.emit("ride-rejected", {
-      rideId,
-      captainId: "CAPTAIN_123",
+  const confirmRide = () => {
+    socket.emit("user-confirm-ride", {
+      rideId: ride._id,
     });
 
-    setRideRequests((prev) =>
-      prev.filter((ride) => ride.rideId !== rideId)
-    );
-    setStatus("Ride rejected");
+    setStatus("Ride confirmed");
   };
 
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gray-100 px-10 py-6">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold">Captain Dashboard</h2>
-          <span className="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
-            {status}
-          </span>
-        </div>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        {!ride ? (
+          <div className="text-xl font-semibold text-gray-600">
+            ⏳ Waiting for ride updates...
+          </div>
+        ) : (
+          <div className="bg-white p-6 rounded-xl shadow-md w-[400px]">
+            <h2 className="text-2xl font-bold mb-4">Your Ride</h2>
 
-        {/* Ride Requests */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {rideRequests.length === 0 && (
-            <div className="col-span-full text-center text-gray-500 mt-20">
-              🚕 No ride requests yet
+            <p><b>Pickup:</b> {ride.pickup}</p>
+            <p><b>Destination:</b> {ride.destination}</p>
+            <p><b>Vehicle:</b> {ride.vehicleType}</p>
+
+            <div className="mt-4 px-3 py-2 rounded-lg bg-blue-100 text-blue-700 font-semibold text-center">
+              {status}
             </div>
-          )}
 
-          {rideRequests.map((ride) => (
-            <div
-              key={ride.rideId}
-              className="bg-white rounded-xl shadow-md p-5 border hover:shadow-lg transition"
-            >
-              <h3 className="text-lg font-bold mb-2">
-                Ride ID: {ride.rideId}
-              </h3>
-
-              <div className="space-y-1 text-sm">
-                <p>
-                  📍 <b>Pickup:</b> {ride.pickup}
-                </p>
-                <p>
-                  🏁 <b>Destination:</b> {ride.destination}
-                </p>
-                <p>
-                  📏 <b>Distance:</b> {ride.distanceKm} km
-                </p>
-                <p>
-                  💰 <b>Fare:</b>{" "}
-                  <span className="text-green-600 font-bold">
-                    ₹{ride.fare}
-                  </span>
-                </p>
-                <p>
-                  🚘 <b>Vehicle:</b> {ride.vehicleType.toUpperCase()}
-                </p>
-              </div>
-
-              <div className="flex gap-3 mt-4">
+            {status === "Captain accepted your ride" && (
+              <div className="flex gap-3 mt-5">
                 <button
-                  onClick={() => acceptRide(ride.rideId)}
-                  className="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700"
+                  onClick={confirmRide}
+                  className="flex-1 bg-green-600 text-white py-2 rounded-lg"
                 >
-                  Accept
+                  Confirm
                 </button>
 
                 <button
-                  onClick={() => rejectRide(ride.rideId)}
-                  className="flex-1 bg-red-500 text-white py-2 rounded-lg font-semibold hover:bg-red-600"
+                  onClick={cancelRide}
+                  className="flex-1 bg-red-500 text-white py-2 rounded-lg"
                 >
-                  Decline
+                  Cancel
                 </button>
               </div>
-            </div>
-          ))}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

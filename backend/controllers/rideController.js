@@ -4,34 +4,65 @@ import { getFareService, createRideService, confirmRideService , startRideServic
 import { sendMessageToSocketId } from "../socket.js";
 import rideModel from "../models/rideModel.js";
 
-export const createRide = async(req , res)=>{
+export const createRide = async (req, res) => {
+  try {
+    // 1️⃣ Validate request
     const errors = validationResult(req);
-    if(!errors.isEmpty()){
-        return res.status(400).json({errors: errors.array()});
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    const { pickup , destination , vehicleType} = req.body;
-    try{
-        const ride = await createRideService({ user: req.user._id , pickup , destination , vehicleType});
-        res.status(201).json({rideData : ride});
+    const { pickup, destination, vehicleType } = req.body;
 
-        const pickupCoordinates = await getAddressCoordinates(pickup);
-        const captainInRadius = await getCaptainInTheRadius(pickupCoordinates.lat , pickupCoordinates.lng , 2);
+    
+    const ride = await createRideService({
+      user: req.user._id,
+      pickup,
+      destination,
+      vehicleType,
+      status: "pending",
+    });
 
-        const rideWithUser = await rideModel.findOne({_id:ride._id}).populate("user");
-        captainInRadius.forEach((captain) => {
-            if (captain.socketId) {
-                sendMessageToSocketId(captain.socketId , {
-                    event : "new-ride" ,
-                    data : rideWithUser
-                });
-            }
+    
+    res.status(201).json({ ride });
+    const pickupCoordinates = await getAddressCoordinates(pickup);
+
+    
+    const captains = await getCaptainInTheRadius(
+      pickupCoordinates.lat,
+      pickupCoordinates.lng,
+      2
+    );
+
+    if (!captains.length) return;
+
+    
+    const populatedRide = await rideModel
+      .findById(ride._id)
+      .populate("user", "firstname lastname email");
+
+    
+    captains.forEach((captain) => {
+      if (captain.socketId) {
+        sendMessageToSocketId(captain.socketId, {
+          event: "new-ride",
+          data: {
+            _id: populatedRide._id,
+            pickup: populatedRide.pickup,
+            destination: populatedRide.destination,
+            vehicleType: populatedRide.vehicleType,
+            status: populatedRide.status,
+            user: populatedRide.user,
+          },
         });
-    }
-    catch(e){
-        console.log(e);
-    }
-}
+      }
+    });
+
+  } catch (error) {
+    console.error("CREATE RIDE ERROR:", error);
+    return res.status(500).json({ message: "Failed to create ride" });
+  }
+};
 
 export const getFare = async(req, res)=>{
     const errors = validationResult(req);
