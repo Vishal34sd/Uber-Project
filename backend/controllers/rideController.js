@@ -6,15 +6,31 @@ import rideModel from "../models/rideModel.js";
 
 export const createRide = async (req, res) => {
   try {
-    
+    console.log("====== CREATE RIDE HIT ======");
+
+    // 1️⃣ Validation check
     const errors = validationResult(req);
+    console.log("VALIDATION ERRORS:", errors.array());
+
     if (!errors.isEmpty()) {
+      console.log("❌ Validation failed");
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { pickup, destination, vehicleType } = req.body;
+    // 2️⃣ Check auth user
+    console.log("REQ.USER:", req.user);
 
-    
+    if (!req.user) {
+      console.log("❌ req.user is NULL");
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const { pickup, destination, vehicleType } = req.body;
+    console.log("REQUEST BODY:", { pickup, destination, vehicleType });
+
+    // 3️⃣ Create ride
+    console.log("Creating ride for user:", req.user._id);
+
     const ride = await createRideService({
       user: req.user._id,
       pickup,
@@ -23,26 +39,46 @@ export const createRide = async (req, res) => {
       status: "pending",
     });
 
-    
-    res.status(201).json({ ride });
-    const pickupCoordinates = await getAddressCoordinates(pickup);
+    console.log("✅ Ride created:", ride);
 
-    
+    // 4️⃣ Send response early (your current logic)
+    res.status(201).json({ ride });
+    console.log("🚀 Response sent to client");
+
+    // 5️⃣ Get pickup coordinates
+    console.log("Fetching coordinates for pickup:", pickup);
+    const pickupCoordinates = await getAddressCoordinates(pickup);
+    console.log("Pickup coordinates:", pickupCoordinates);
+
+    // 6️⃣ Find nearby captains
+    console.log("Searching captains within 2km...");
     const captains = await getCaptainInTheRadius(
       pickupCoordinates.lat,
       pickupCoordinates.lng,
       2
     );
 
-    if (!captains.length) return;
+    console.log("Nearby captains found:", captains.length);
 
-    
+    if (!captains.length) {
+      console.log("⚠️ No captains available nearby");
+      return;
+    }
+
+    // 7️⃣ Populate ride
     const populatedRide = await rideModel
       .findById(ride._id)
       .populate("user", "firstname lastname email");
 
-    
+    console.log("Populated ride:", populatedRide);
+
+    // 8️⃣ Emit socket event
     captains.forEach((captain) => {
+      console.log(
+        `Captain ${captain._id} socketId:`,
+        captain.socketId
+      );
+
       if (captain.socketId) {
         sendMessageToSocketId(captain.socketId, {
           event: "ride-confirmed",
@@ -55,11 +91,13 @@ export const createRide = async (req, res) => {
             user: populatedRide.user,
           },
         });
+
+        console.log("📡 Ride sent to captain:", captain._id);
       }
     });
 
   } catch (error) {
-    console.error("CREATE RIDE ERROR:", error);
+    console.error("🔥 CREATE RIDE ERROR:", error);
     return res.status(500).json({ message: "Failed to create ride" });
   }
 };
