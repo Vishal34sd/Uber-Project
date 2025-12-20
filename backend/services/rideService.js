@@ -18,13 +18,13 @@ export const getFareService = async ({ pickup, destination, vehicleType }) => {
     const baseFare = {
         auto: 30,
         car: 50,
-        bike: 20,
+        motorcycle: 20,
     };
 
     const perKmRate = {
         auto: 10,
         car: 15,
-        bike: 8,
+        motorcycle: 8,
     };
 
     // get distance from your map service

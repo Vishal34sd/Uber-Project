@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import Navbar from "../components/Navbar";
+import CaptainNavbar from "../components/CaptainNavbar";
 import { io } from "socket.io-client";
 import axios from "axios";
 import { decodeAccessToken, getAccessToken } from "../helper/Token";
@@ -97,7 +97,7 @@ export default function CaptainDashboard() {
 
   return (
     <>
-      <Navbar />
+      <CaptainNavbar />
 
       <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
         {!ride ? (
