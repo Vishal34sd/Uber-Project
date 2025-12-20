@@ -228,7 +228,7 @@ Time: ${hours > 0 ? `${hours} hr ${minutes} min` : `${minutes} min`}`
               className="w-full border px-4 py-3 rounded-lg mb-4"
             >
               <option value="">Select Vehicle</option>
-              <option value="bike">Bike</option>
+		      <option value="motorcycle">Motorcycle</option>
               <option value="auto">Auto</option>
               <option value="car">Car</option>
             </select>

@@ -110,6 +110,7 @@ export const getFare = async(req, res)=>{
 
     const { pickup , destination, vehicleType } = req.query ;
     try{
+    console.log("GET FARE QUERY:", { pickup, destination, vehicleType });
         const {distanceKm , durationSeconds , fare} = await getFareService({ pickup , destination, vehicleType });
         res.status(200).json({
             fareData: {

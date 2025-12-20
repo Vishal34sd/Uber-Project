@@ -7,7 +7,9 @@ export const getFareService = async ({ pickup, destination, vehicleType }) => {
         throw new Error("Pickup and destination are required");
     }
 
-    const allowedVehicles = ["auto", "car", "bike"];
+    // Keep allowed vehicle types consistent with rideValidation
+    // and captainModel (car, motorcycle, auto)
+    const allowedVehicles = ["auto", "car", "motorcycle"];
     if (!vehicleType || !allowedVehicles.includes(vehicleType)) {
         throw new Error("Invalid or missing vehicle type");
     }
@@ -61,6 +63,7 @@ export const createRideService = async ({
     user,
     pickup,
     destination,
+        vehicleType,
     fare: fareData.fare,
     distance: fareData.distanceKm,
     duration: fareData.durationSeconds,

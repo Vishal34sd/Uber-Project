@@ -5,10 +5,12 @@ import captainModel from "./models/captainModel.js";
 let io;
 
 export const initializeSocket = (server) => {
+  // Allow Vite dev frontend to connect over WebSocket
   io = new Server(server, {
     cors: {
-      origin: "*",
+      origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
       methods: ["GET", "POST"],
+      credentials: true,
     },
   });
 
@@ -75,10 +77,19 @@ export const sendMessageToSocketId = (socketId, message) => {
     return;
   }
 
+	const targetSocket = io.sockets.sockets.get(socketId);
+	if (!targetSocket) {
+		console.log("⚠️ EMIT SKIPPED: socket not connected", {
+			socketId,
+			event: message.event,
+		});
+		return;
+	}
+
   console.log("📤 EMITTING EVENT:", {
     socketId,
     event: message.event,
   });
 
-  io.to(socketId).emit(message.event, message.data);
+  targetSocket.emit(message.event, message.data);
 };
